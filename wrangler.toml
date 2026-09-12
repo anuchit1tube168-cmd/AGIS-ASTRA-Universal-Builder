@@ -1,0 +1,27 @@
+name = "agis-astra-control"
+main = "src/worker.ts"
+compatibility_date = "2026-09-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agis-astra-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[queues.producers]]
+binding = "TASK_QUEUE"
+queue = "agis-astra-tasks"
+
+[[queues.consumers]]
+queue = "agis-astra-tasks"
+max_batch_size = 5
+max_batch_timeout = 5
+max_retries = 5
+dead_letter_queue = "agis-astra-tasks-dlq"
+
+[vars]
+APP_ENV = "production"
+SESSION_TTL_SECONDS = "43200"
