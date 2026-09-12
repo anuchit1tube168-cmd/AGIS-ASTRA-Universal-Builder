@@ -77,7 +77,7 @@ async function protectedApi(req: Request, env: Env) {
 
 async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
   if (url.pathname === "/api/login" && req.method === "POST") {
-    const body = await req.json<{password?:string}>().catch(()=>({}));
+    const body = await req.json().catch(()=>({})) as {password?: string};
     if (!body.password || body.password !== env.ADMIN_PASSWORD) {
       await audit(env, "web", "login_failed");
       return json({error:"invalid credentials"}, 401);
@@ -123,7 +123,7 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
   }
 
   if (url.pathname === "/api/tasks" && req.method === "POST") {
-    const body = await req.json<{command?:string}>().catch(()=>({}));
+    const body = await req.json().catch(()=>({})) as {command?: string};
     const command = (body.command || "").trim();
     if (!command || command.length > 20000) return json({error:"invalid command"}, 400);
     const taskId = crypto.randomUUID();
@@ -149,7 +149,7 @@ async function handleInternal(req: Request, env: Env, url: URL): Promise<Respons
   if (bearer(req) !== env.CALLBACK_TOKEN) return json({error:"unauthorized"}, 401);
 
   if (url.pathname === "/internal/task-result" && req.method === "POST") {
-    const body = await req.json<{taskId?:string,status?:string,result?:string,error?:string}>().catch(()=>({}));
+    const body = await req.json().catch(()=>({})) as {taskId?: string; status?: string; result?: string; error?: string};
     if (!body.taskId) return json({error:"taskId required"}, 400);
     const status = body.status === "completed" ? "completed" : "failed";
     await env.DB.prepare(
@@ -160,7 +160,7 @@ async function handleInternal(req: Request, env: Env, url: URL): Promise<Respons
   }
 
   if (url.pathname === "/internal/heartbeat" && req.method === "POST") {
-    const body = await req.json<{runtimeId?:string,state?:string,detail?:string}>().catch(()=>({}));
+    const body = await req.json().catch(()=>({})) as {runtimeId?: string; state?: string; detail?: string};
     const runtimeId = body.runtimeId || "agis-bridge";
     await env.DB.prepare(`
       INSERT INTO runtime_heartbeat(runtime_id,state,detail,last_seen)
@@ -176,11 +176,13 @@ async function handleInternal(req: Request, env: Env, url: URL): Promise<Respons
 
 async function fetchHandler(req: Request, env: Env): Promise<Response> {
   const url = new URL(req.url);
+
   if (url.pathname === "/health") {
     return json({ok:true, env:env.APP_ENV || "unknown", time:new Date().toISOString()});
   }
   if (url.pathname.startsWith("/api/")) return handleApi(req, env, url);
   if (url.pathname.startsWith("/internal/")) return handleInternal(req, env, url);
+
   return env.ASSETS.fetch(req);
 }
 
@@ -200,6 +202,7 @@ async function queueHandler(batch: MessageBatch<TaskMessage>, env: Env) {
         },
         body:JSON.stringify({taskId, command, source})
       });
+
       if (!res.ok) throw new Error(`bridge returned ${res.status}`);
 
       await env.DB.prepare(
