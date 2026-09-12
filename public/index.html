@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AGIS Mission Control</title>
+<style>
+:root{--b:#f4f7fb;--p:#fff;--t:#142033;--m:#6c788a;--l:#dfe6ef;--x:#315ee8;--ok:#19865b}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--b);color:var(--t)}
+.wrap{max-width:1180px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}
+h1{margin:0;font-size:28px}.muted{color:var(--m)}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:var(--p);border:1px solid var(--l);border-radius:18px;padding:18px;box-shadow:0 10px 28px rgba(20,35,60,.06)}
+.metric b{font-size:28px;display:block;margin-top:8px}.two{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:14px}
+input,button{font:inherit}input{width:100%;padding:12px;border:1px solid var(--l);border-radius:12px}button{padding:11px 14px;border:0;border-radius:12px;background:var(--x);color:#fff;cursor:pointer}
+.row{display:flex;gap:10px}.row input{flex:1}.item{padding:10px 0;border-bottom:1px solid var(--l)}.badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#e8f5ef;color:var(--ok)}
+#login{max-width:420px;margin:12vh auto}.hidden{display:none}.taskcmd{font-weight:700}.small{font-size:12px}.status{margin-left:8px}
+pre{white-space:pre-wrap;background:#0e1a2a;color:#dce9ff;padding:12px;border-radius:12px;max-height:280px;overflow:auto}
+@media(max-width:800px){.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}}@media(max-width:520px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}
+</style></head>
+<body>
+<div id="login" class="card"><h2>AGIS Mission Control</h2><p class="muted">เข้าสู่ระบบผู้ควบคุม</p><div class="row"><input id="password" type="password" placeholder="Admin password"><button onclick="login()">Login</button></div><p id="loginError" class="muted"></p></div>
+<div id="app" class="wrap hidden">
+<div class="top"><div><h1>AGIS × ASTRA 6</h1><div class="muted">24/7 Mission Control • Queue • Audit • Agent Runtime</div></div><button onclick="logout()">Logout</button></div>
+<div class="grid"><div class="card metric"><span class="muted">Queued</span><b id="queued">0</b></div><div class="card metric"><span class="muted">Running</span><b id="running">0</b></div><div class="card metric"><span class="muted">Completed</span><b id="completed">0</b></div><div class="card metric"><span class="muted">Runtime</span><b id="runtime">—</b></div></div>
+<div class="two"><div class="card"><h2>สั่งงาน ASTRA</h2><div class="row"><input id="command" placeholder="เช่น /web ทำ dashboard..."><button onclick="submitTask()">Queue</button></div><p class="muted small">งานจะถูกบันทึกก่อน แล้วค่อยส่งไป Hermes bridge แบบ async</p><div id="tasks"></div></div><div class="card"><h2>Agents</h2><div id="agents"></div><h3>Last result</h3><pre id="result">—</pre></div></div></div>
+<script>
+const $=id=>document.getElementById(id);async function api(path,options={}){const r=await fetch(path,{...options,headers:{'content-type':'application/json',...(options.headers||{})}});if(r.status===401){showLogin();throw new Error('unauthorized')}return r}function showLogin(){$('login').classList.remove('hidden');$('app').classList.add('hidden')}function showApp(){$('login').classList.add('hidden');$('app').classList.remove('hidden')}
+async function login(){const r=await api('/api/login',{method:'POST',body:JSON.stringify({password:$('password').value})});if(r.ok){showApp();refresh()}else $('loginError').textContent='เข้าสู่ระบบไม่สำเร็จ'}async function logout(){await api('/api/logout',{method:'POST'});showLogin()}async function submitTask(){const v=$('command').value.trim();if(!v)return;const r=await api('/api/tasks',{method:'POST',body:JSON.stringify({command:v})});if(r.ok){$('command').value='';refresh()}}
+async function refresh(){const me=await fetch('/api/me');const mj=await me.json();if(!mj.authenticated)return showLogin();showApp();const [s,t]=await Promise.all([api('/api/status').then(x=>x.json()),api('/api/tasks').then(x=>x.json())]);const counts=Object.fromEntries((s.tasks||[]).map(x=>[x.status,Number(x.count)]));$('queued').textContent=(counts.queued||0)+(counts.retrying||0);$('running').textContent=(counts.running||0)+(counts.dispatching||0);$('completed').textContent=counts.completed||0;const hb=(s.heartbeat||[])[0];$('runtime').textContent=hb?hb.state:'offline';$('agents').innerHTML=(s.agents||[]).map(a=>`<div class="item"><b>${a.name}</b> <span class="badge">${a.status}</span><div class="muted small">${a.capability}</div></div>`).join('');$('tasks').innerHTML=(t.tasks||[]).slice(0,20).map(x=>`<div class="item"><span class="taskcmd">${escapeHtml(x.command).slice(0,120)}</span><span class="status badge">${x.status}</span><div class="muted small">${x.created_at}</div><button onclick="showResultById('${x.id}')" style="margin-top:6px">Result</button></div>`).join('');window.__tasks=t.tasks||[]}
+function showResultById(id){const x=(window.__tasks||[]).find(t=>t.id===id);$('result').textContent=(x&& (x.result||x.error))||'ยังไม่มีผลลัพธ์'}function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}fetch('/api/me').then(r=>r.json()).then(x=>x.authenticated?(showApp(),refresh()):showLogin());setInterval(()=>{if(!$('app').classList.contains('hidden'))refresh()},10000);
+</script></body></html>
