@@ -1,0 +1,22 @@
+[Unit]
+Description=AGIS Hermes Agent Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=REPLACE_WITH_LINUX_USER
+WorkingDirectory=REPLACE_WITH_REPO_PATH
+EnvironmentFile=REPLACE_WITH_REPO_PATH/bridge/bridge.env
+ExecStart=/usr/bin/node REPLACE_WITH_REPO_PATH/bridge/server.mjs
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=REPLACE_WITH_REPO_PATH
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
