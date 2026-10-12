@@ -9,13 +9,14 @@ Web Mission Control ─┐
                      ├─> Cloudflare Worker/API
 GitHub / automations ┘          │
                                ├─ D1: tasks, audit, agent registry
+                               ├─ D1: REA Scout cases/events
                                ├─ Queue: durable async dispatch
                                └─ callback / heartbeat
                                       │
                                       ▼
                               AGIS Agent Bridge (VPS)
-                                      │
-                              Hermes one-shot runner
+                                ├─ Hermes generic runtime
+                                └─ REA Scout isolated runtime
                                       │
                               Codex / skills / tools
 
@@ -29,6 +30,10 @@ Reverse Engineer Anything (REA) is integrated as a **pinned, staging-only Scout 
 ```text
 Authorized target
       ↓
+Mission Control REA Case
+      ↓
+Authorization + runtime gates
+      ↓
 REA Scout / evidence collection
       ↓
 evidence → architecture → feature map → risk register
@@ -38,7 +43,7 @@ clean-room implementation plan
 Build Agent → Test → Security Auditor → SKILL.md
 ```
 
-Safe commands:
+Safe source/case commands:
 
 ```bash
 npm run rea:guard
@@ -46,7 +51,11 @@ npm run rea:init
 npm run rea:new-case -- <case-name> --authorized --type=web --target=<reference>
 ```
 
-`rea:init` only initializes the locked source commit. It does not install REA dependencies or run REA setup. Production writes and credential access remain disabled by policy. See `docs/REA_SCOUT_PIPELINE.md`.
+`rea:init` only initializes the locked source commit. It does not install REA dependencies or run REA setup.
+
+Phase 2 also exposes REA cases in Mission Control. When runtime execution is off, authorized cases are stored as `awaiting_runtime` and are not dispatched. Execution requires both `APP_ENV=staging` + `REA_RUNTIME_ENABLED=true` on the Worker and `REA_EXECUTION_ENABLED=true` on a Bridge configured with a dedicated REA Hermes home/workspace.
+
+See `docs/REA_SCOUT_PIPELINE.md` and `docs/REA_RUNTIME_PHASE2.md`.
 
 ## Production safety
 
@@ -57,6 +66,8 @@ npm run rea:new-case -- <case-name> --authorized --type=web --target=<reference>
 - Web-dispatched Hermes runs use safe mode.
 - Newly imported agents remain sandbox/experimental until reviewed.
 - REA Scout is staging-only and cannot be promoted without evidence and security review.
+- REA child processes receive a dedicated HOME/workspace and an allowlisted environment instead of the Bridge environment.
+- Committed Worker and Bridge configuration keeps REA execution disabled.
 
 ## Quick start
 
@@ -68,4 +79,6 @@ npm run rea:new-case -- <case-name> --authorized --type=web --target=<reference>
 6. `npm run deploy`
 7. Configure the VPS bridge and Hermes system service.
 
-See `docs/DEPLOYMENT.md` and `docs/REA_SCOUT_PIPELINE.md`.
+For REA, run `npm run rea:guard` before any source initialization or staging configuration. Do not enable REA execution in production.
+
+See `docs/DEPLOYMENT.md`, `docs/REA_SCOUT_PIPELINE.md`, and `docs/REA_RUNTIME_PHASE2.md`.
