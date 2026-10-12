@@ -79,6 +79,10 @@ Phase 2 must not be merged unless both repository checks pass:
 - `REA Scout Guard` — policy, pin, bridge syntax and default-off runtime posture.
 - `check` — TypeScript compile check for the Worker/control-plane changes.
 
+## Merge posture
+
+The code may be merged to `main` while both runtime gates remain off. Merge does not authorize REA execution and does not deploy the Worker by itself.
+
 ## Production rule
 
-Merging Phase 2 is allowed with runtime execution disabled. Enabling the runtime is a separate staging configuration action. Production execution remains prohibited by the REA Scout policy.
+Enabling the runtime is a separate staging configuration action. Production execution remains prohibited by the REA Scout policy.
