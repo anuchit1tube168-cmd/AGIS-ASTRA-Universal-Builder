@@ -22,6 +22,32 @@ GitHub / automations ┘          │
 Telegram ───────────────> Hermes Gateway (24/7 systemd)
 ```
 
+## REA Scout Agent
+
+Reverse Engineer Anything (REA) is integrated as a **pinned, staging-only Scout capability** under `vendor/rea`.
+
+```text
+Authorized target
+      ↓
+REA Scout / evidence collection
+      ↓
+evidence → architecture → feature map → risk register
+      ↓
+clean-room implementation plan
+      ↓
+Build Agent → Test → Security Auditor → SKILL.md
+```
+
+Safe commands:
+
+```bash
+npm run rea:guard
+npm run rea:init
+npm run rea:new-case -- <case-name> --authorized --type=web --target=<reference>
+```
+
+`rea:init` only initializes the locked source commit. It does not install REA dependencies or run REA setup. Production writes and credential access remain disabled by policy. See `docs/REA_SCOUT_PIPELINE.md`.
+
 ## Production safety
 
 - Browser login uses an HttpOnly signed session cookie.
@@ -30,6 +56,7 @@ Telegram ───────────────> Hermes Gateway (24/7 sys
 - Production writes remain explicit and approval-gated.
 - Web-dispatched Hermes runs use safe mode.
 - Newly imported agents remain sandbox/experimental until reviewed.
+- REA Scout is staging-only and cannot be promoted without evidence and security review.
 
 ## Quick start
 
@@ -41,4 +68,4 @@ Telegram ───────────────> Hermes Gateway (24/7 sys
 6. `npm run deploy`
 7. Configure the VPS bridge and Hermes system service.
 
-See `docs/DEPLOYMENT.md`.
+See `docs/DEPLOYMENT.md` and `docs/REA_SCOUT_PIPELINE.md`.
