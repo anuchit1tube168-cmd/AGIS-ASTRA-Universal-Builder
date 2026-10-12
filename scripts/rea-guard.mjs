@@ -9,11 +9,15 @@ const fail = (message) => {
 };
 const readJson = (relativePath) =>
   JSON.parse(fs.readFileSync(path.join(root, relativePath), 'utf8'));
+const readText = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const git = (args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 
 const lock = readJson('agents/rea-scout/REA_UPSTREAM.lock.json');
 const policy = readJson('agents/rea-scout/policy.json');
-const gitmodules = fs.readFileSync(path.join(root, '.gitmodules'), 'utf8');
+const gitmodules = readText('.gitmodules');
+const wrangler = readText('wrangler.toml');
+const bridgeExample = readText('bridge/bridge.env.example');
+const bridgeSource = readText('bridge/server.mjs');
 
 if (lock.source !== 'https://github.com/morluto/rea') fail('unexpected upstream source');
 if (!/^[0-9a-f]{40}$/.test(lock.commit)) fail('upstream commit must be a full 40-char SHA');
@@ -39,6 +43,13 @@ if (policy.clean_room_reimplementation !== true) fail('clean-room reimplementati
 if (!gitmodules.includes('url = https://github.com/morluto/rea.git')) {
   fail('.gitmodules does not point to the approved REA upstream');
 }
+
+if (!wrangler.includes('APP_ENV = "production"')) fail('committed worker config must remain production');
+if (!wrangler.includes('REA_RUNTIME_ENABLED = "false"')) fail('REA worker runtime must be disabled in committed production config');
+if (!/^REA_EXECUTION_ENABLED=false$/m.test(bridgeExample)) fail('REA bridge execution must be disabled in committed example');
+if (!bridgeSource.includes('function reaChildEnv(')) fail('bridge must define isolated REA child environment');
+if (!bridgeSource.includes('REA_WORKSPACE_ROOT !== AGIS_REPO')) fail('REA workspace must be guarded from the AGIS repo root');
+if (!bridgeSource.includes('childEnv = reaChildEnv(dir)')) fail('REA tasks must use the isolated child environment');
 
 let treeLine = '';
 try {
@@ -92,4 +103,4 @@ for (const file of trackedCases) {
 }
 
 console.log(`REA guard passed. Upstream pinned at ${lock.commit}. Production writes remain disabled.`);
-console.log(`Validated ${caseFiles.length} REA case manifest(s) and ${trackedCases.length} tracked case file(s).`);
+console.log(`Validated runtime default-off posture plus ${caseFiles.length} REA case manifest(s) and ${trackedCases.length} tracked case file(s).`);
