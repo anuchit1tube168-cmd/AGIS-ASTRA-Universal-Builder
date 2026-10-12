@@ -10,6 +10,13 @@ on:
       - 'scripts/new-rea-case.mjs'
       - 'scripts/init-rea-source.sh'
       - 'rea-cases/**'
+      - 'bridge/server.mjs'
+      - 'bridge/bridge.env.example'
+      - 'src/worker.ts'
+      - 'db/schema.sql'
+      - 'public/index.html'
+      - 'wrangler.toml'
+      - 'docs/REA_*'
       - '.github/workflows/rea-scout-guard.yml'
       - 'package.json'
   push:
@@ -24,6 +31,13 @@ on:
       - 'scripts/new-rea-case.mjs'
       - 'scripts/init-rea-source.sh'
       - 'rea-cases/**'
+      - 'bridge/server.mjs'
+      - 'bridge/bridge.env.example'
+      - 'src/worker.ts'
+      - 'db/schema.sql'
+      - 'public/index.html'
+      - 'wrangler.toml'
+      - 'docs/REA_*'
       - '.github/workflows/rea-scout-guard.yml'
       - 'package.json'
 
@@ -57,3 +71,12 @@ jobs:
 
       - name: Syntax-check safe initializer
         run: bash -n scripts/init-rea-source.sh
+
+      - name: Syntax-check isolated bridge
+        run: node --check bridge/server.mjs
+
+      - name: Assert production runtime remains disabled in committed config
+        run: |
+          grep -q 'APP_ENV = "production"' wrangler.toml
+          grep -q 'REA_RUNTIME_ENABLED = "false"' wrangler.toml
+          grep -q '^REA_EXECUTION_ENABLED=false$' bridge/bridge.env.example
