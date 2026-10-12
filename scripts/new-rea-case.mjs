@@ -28,7 +28,26 @@ if (!slug) {
   process.exit(1);
 }
 
-const target = targetArg ? targetArg.slice('--target='.length) : 'REDACTED_OR_NOT_SET';
+const sanitizeTargetReference = (value) => {
+  if (!value) return 'REDACTED_OR_NOT_SET';
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol)) return 'REDACTED_NON_HTTP_TARGET';
+    url.username = '';
+    url.password = '';
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+  } catch {
+    if (/(?:token|secret|password|api[_-]?key|session|signature)\s*[=:]/i.test(value)) {
+      return 'REDACTED_SENSITIVE_REFERENCE';
+    }
+    return value.slice(0, 256);
+  }
+};
+
+const rawTarget = targetArg ? targetArg.slice('--target='.length) : '';
+const target = sanitizeTargetReference(rawTarget);
 const targetType = targetTypeArg ? targetTypeArg.slice('--type='.length) : 'other';
 const allowedTypes = new Set(['web', 'electron', 'android', 'dotnet', 'native', 'other']);
 if (!allowedTypes.has(targetType)) {
@@ -59,7 +78,7 @@ write('case.json', `${JSON.stringify({
   created_at: new Date().toISOString()
 }, null, 2)}\n`);
 
-write('evidence/index.md', `# Evidence — ${slug}\n\n## Scope\n- Authorized target only.\n- Record observations, hashes, timestamps, and reproducible steps.\n- Do not commit credentials, personal data, proprietary source, or private assets.\n\n## Observations\n\n| ID | Observation | Evidence | Confidence |\n|---|---|---|---|\n| E-001 | Pending | Pending | Low |\n`);
+write('evidence/index.md', `# Evidence — ${slug}\n\n## Scope\n- Authorized target only.\n- Record observations, hashes, timestamps, and reproducible steps.\n- Do not commit credentials, personal data, proprietary source, or private assets.\n- Store only sanitized target references; URL query strings and fragments are removed by the case generator.\n\n## Observations\n\n| ID | Observation | Evidence | Confidence |\n|---|---|---|---|\n| E-001 | Pending | Pending | Low |\n`);
 
 write('architecture.md', `# Architecture — ${slug}\n\n## Observed components\nPending evidence.\n\n## Data flow\nPending evidence.\n\n## Trust boundaries\nPending evidence.\n`);
 write('feature-map.md', `# Feature Map — ${slug}\n\n| Feature | Observed behavior | Evidence IDs | Clean-room implementation note |\n|---|---|---|---|\n| Pending | Pending | Pending | Pending |\n`);
@@ -68,4 +87,5 @@ write('implementation-plan.md', `# Clean-room Implementation Plan — ${slug}\n\
 write('SKILL.md', `# Extracted Skill — ${slug}\n\nStatus: DRAFT — do not promote until evidence and security review pass.\n\n## Proven pattern\nPending.\n\n## Preconditions\nPending.\n\n## Procedure\nPending.\n\n## Tests\nPending.\n`);
 
 console.log(`Created authorized REA case scaffold: rea-cases/${slug}`);
+console.log(`Stored sanitized target reference: ${target}`);
 console.log('No REA analysis was executed. Production writes remain disabled.');
