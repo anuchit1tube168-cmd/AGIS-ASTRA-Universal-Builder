@@ -72,6 +72,13 @@ This assumes the pinned source checkout has its reviewed runtime dependencies av
 
 Every case stores a sanitized target reference, an explicit scope, authorization confirmation, staging-only environment and `production_write=false`.
 
+## Validation
+
+Phase 2 must not be merged unless both repository checks pass:
+
+- `REA Scout Guard` — policy, pin, bridge syntax and default-off runtime posture.
+- `check` — TypeScript compile check for the Worker/control-plane changes.
+
 ## Production rule
 
 Merging Phase 2 is allowed with runtime execution disabled. Enabling the runtime is a separate staging configuration action. Production execution remains prohibited by the REA Scout policy.
