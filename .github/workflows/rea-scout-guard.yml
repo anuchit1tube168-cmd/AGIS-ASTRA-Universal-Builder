@@ -1,0 +1,59 @@
+name: REA Scout Guard
+
+on:
+  pull_request:
+    paths:
+      - '.gitmodules'
+      - 'vendor/rea'
+      - 'agents/rea-scout/**'
+      - 'scripts/rea-guard.mjs'
+      - 'scripts/new-rea-case.mjs'
+      - 'scripts/init-rea-source.sh'
+      - 'rea-cases/**'
+      - '.github/workflows/rea-scout-guard.yml'
+      - 'package.json'
+  push:
+    branches:
+      - main
+      - 'integration/rea-scout-*'
+    paths:
+      - '.gitmodules'
+      - 'vendor/rea'
+      - 'agents/rea-scout/**'
+      - 'scripts/rea-guard.mjs'
+      - 'scripts/new-rea-case.mjs'
+      - 'scripts/init-rea-source.sh'
+      - 'rea-cases/**'
+      - '.github/workflows/rea-scout-guard.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without executing submodule code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate REA policy and pinned gitlink
+        run: node scripts/rea-guard.mjs
+
+      - name: Syntax-check REA case generator
+        run: node --check scripts/new-rea-case.mjs
+
+      - name: Syntax-check REA guard
+        run: node --check scripts/rea-guard.mjs
+
+      - name: Syntax-check safe initializer
+        run: bash -n scripts/init-rea-source.sh
