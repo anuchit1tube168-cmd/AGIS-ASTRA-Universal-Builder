@@ -1,0 +1,8 @@
+{
+  "source": "https://github.com/morluto/rea",
+  "commit": "d864ad54717d92fe4b512ce1170717d9904c1f00",
+  "captured_at": "2026-10-12",
+  "integration": "git-submodule",
+  "production_enabled": false,
+  "review_required_for_upgrade": true
+}

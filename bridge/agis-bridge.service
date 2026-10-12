@@ -15,7 +15,8 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=REPLACE_WITH_REPO_PATH
+UMask=0077
+ReadWritePaths=REPLACE_WITH_REPO_PATH REPLACE_WITH_REA_HERMES_HOME REPLACE_WITH_REA_WORKSPACE_ROOT
 TimeoutStopSec=30
 
 [Install]
