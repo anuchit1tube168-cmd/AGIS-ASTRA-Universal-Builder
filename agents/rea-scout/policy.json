@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "mode": "staging-only",
+  "authorization_required": true,
+  "production_write": false,
+  "allow_auth_bypass": false,
+  "allow_drm_bypass": false,
+  "allow_anti_cheat_bypass": false,
+  "allow_credential_access": false,
+  "allow_personal_data_collection": false,
+  "unknown_binary_isolation": "required",
+  "upstream_upgrade_review": "required",
+  "clean_room_reimplementation": true,
+  "required_outputs": [
+    "evidence/index.md",
+    "architecture.md",
+    "feature-map.md",
+    "risk-register.md",
+    "implementation-plan.md",
+    "SKILL.md"
+  ],
+  "handoff": [
+    "build-agent",
+    "security-auditor"
+  ]
+}
