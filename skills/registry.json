@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "registry": "AGIS-ASTRA Skill Registry",
+  "distribution_layer": "Skills Hub",
+  "auto_sync_enabled": false,
+  "production_write": false,
+  "states": [
+    "DRAFT",
+    "VALIDATED",
+    "SECURITY_REVIEWED",
+    "REGISTRY_APPROVED",
+    "STAGING_SYNC",
+    "VERIFIED",
+    "PRODUCTION_APPROVED"
+  ],
+  "skills": []
+}
