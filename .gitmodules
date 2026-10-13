@@ -1,3 +1,6 @@
 [submodule "vendor/rea"]
 	path = vendor/rea
 	url = https://github.com/morluto/rea.git
+[submodule "vendor/skills-hub"]
+	path = vendor/skills-hub
+	url = https://github.com/qufei1993/skills-hub.git
