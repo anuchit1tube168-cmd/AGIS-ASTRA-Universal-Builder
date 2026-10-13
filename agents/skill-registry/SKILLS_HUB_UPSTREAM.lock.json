@@ -1,0 +1,10 @@
+{
+  "source": "https://github.com/qufei1993/skills-hub",
+  "commit": "d16c0a1400078a9c6f49eea68155e214bdf51b3f",
+  "version": "1.0.0",
+  "captured_at": "2026-10-13",
+  "integration": "git-submodule",
+  "auto_sync_enabled": false,
+  "production_write": false,
+  "review_required_for_upgrade": true
+}
