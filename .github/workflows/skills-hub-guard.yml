@@ -6,8 +6,10 @@ on:
       - '.gitmodules'
       - 'vendor/skills-hub'
       - 'agents/skill-registry/**'
+      - 'skills/**'
       - 'scripts/skills-hub-guard.mjs'
       - 'scripts/init-skills-hub-source.sh'
+      - 'docs/SKILLS_HUB_*'
       - '.github/workflows/skills-hub-guard.yml'
       - 'package.json'
   push:
@@ -18,8 +20,10 @@ on:
       - '.gitmodules'
       - 'vendor/skills-hub'
       - 'agents/skill-registry/**'
+      - 'skills/**'
       - 'scripts/skills-hub-guard.mjs'
       - 'scripts/init-skills-hub-source.sh'
+      - 'docs/SKILLS_HUB_*'
       - '.github/workflows/skills-hub-guard.yml'
       - 'package.json'
 
@@ -42,7 +46,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate Skills Hub policy and pinned gitlink
+      - name: Validate Skills Hub policy, registry, and pinned gitlink
         run: node scripts/skills-hub-guard.mjs
 
       - name: Syntax-check registry guard
