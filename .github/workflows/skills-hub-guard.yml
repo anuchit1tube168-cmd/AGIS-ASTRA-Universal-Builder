@@ -1,0 +1,52 @@
+name: Skills Hub Guard
+
+on:
+  pull_request:
+    paths:
+      - '.gitmodules'
+      - 'vendor/skills-hub'
+      - 'agents/skill-registry/**'
+      - 'scripts/skills-hub-guard.mjs'
+      - 'scripts/init-skills-hub-source.sh'
+      - '.github/workflows/skills-hub-guard.yml'
+      - 'package.json'
+  push:
+    branches:
+      - main
+      - 'integration/skills-hub-*'
+    paths:
+      - '.gitmodules'
+      - 'vendor/skills-hub'
+      - 'agents/skill-registry/**'
+      - 'scripts/skills-hub-guard.mjs'
+      - 'scripts/init-skills-hub-source.sh'
+      - '.github/workflows/skills-hub-guard.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout without executing submodule code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate Skills Hub policy and pinned gitlink
+        run: node scripts/skills-hub-guard.mjs
+
+      - name: Syntax-check registry guard
+        run: node --check scripts/skills-hub-guard.mjs
+
+      - name: Syntax-check safe initializer
+        run: bash -n scripts/init-skills-hub-source.sh
