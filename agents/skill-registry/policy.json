@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "mode": "staging-only",
+  "auto_sync_enabled": false,
+  "production_write": false,
+  "credential_access": false,
+  "remote_publish": false,
+  "sync_requires_review": true,
+  "upstream_upgrade_review": "required",
+  "allowed_inputs": [
+    "validated SKILL.md",
+    "validated agent documentation",
+    "approved local skill folders"
+  ],
+  "forbidden_inputs": [
+    "credentials",
+    "private keys",
+    "raw REA artifacts",
+    "personal data",
+    "unreviewed proprietary source"
+  ]
+}

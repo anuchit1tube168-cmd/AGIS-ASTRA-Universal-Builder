@@ -19,6 +19,11 @@ GitHub / automations ┘          │
                                 └─ REA Scout isolated runtime
                                       │
                               Codex / skills / tools
+                                      │
+                                      ▼
+                          Skills Hub Registry Layer
+                                      │
+                         validated SKILL.md distribution
 
 Telegram ───────────────> Hermes Gateway (24/7 systemd)
 ```
@@ -57,6 +62,35 @@ Phase 2 also exposes REA cases in Mission Control. When runtime execution is off
 
 See `docs/REA_SCOUT_PIPELINE.md` and `docs/REA_RUNTIME_PHASE2.md`.
 
+## Skills Hub Registry Layer
+
+Skills Hub is integrated as a **pinned, review-gated skill registry/distribution layer** under `vendor/skills-hub`.
+
+```text
+REA Scout / Build Agent
+        ↓
+validated + security-reviewed SKILL.md
+        ↓
+AGIS canonical registry (`skills/registry.json`)
+        ↓
+Skills Hub
+        ↓
+staging sync → verify → explicit production approval
+        ↓
+Codex / isolated Hermes / OpenCode / supported tools
+```
+
+Safe registry commands:
+
+```bash
+npm run skills:guard
+npm run skills:init
+```
+
+`skills:init` only initializes the locked Skills Hub source and verifies origin/SHA. It does not install npm/Cargo dependencies, start Tauri, or sync any skill. Auto-sync and production writes remain disabled.
+
+See `docs/SKILLS_HUB_INTEGRATION.md`.
+
 ## Production safety
 
 - Browser login uses an HttpOnly signed session cookie.
@@ -68,6 +102,8 @@ See `docs/REA_SCOUT_PIPELINE.md` and `docs/REA_RUNTIME_PHASE2.md`.
 - REA Scout is staging-only and cannot be promoted without evidence and security review.
 - REA child processes receive a dedicated HOME/workspace and an allowlisted environment instead of the Bridge environment.
 - Committed Worker and Bridge configuration keeps REA execution disabled.
+- Skills Hub auto-sync, remote publish, credential access, and production writes remain disabled by policy.
+- Distributed skill copies are outputs; the AGIS registry is the canonical source.
 
 ## Quick start
 
@@ -79,6 +115,6 @@ See `docs/REA_SCOUT_PIPELINE.md` and `docs/REA_RUNTIME_PHASE2.md`.
 6. `npm run deploy`
 7. Configure the VPS bridge and Hermes system service.
 
-For REA, run `npm run rea:guard` before any source initialization or staging configuration. Do not enable REA execution in production.
+For REA, run `npm run rea:guard` before any source initialization or staging configuration. For Skills Hub, run `npm run skills:guard` before initializing the pinned source. Do not enable REA execution or skill auto-sync in production without a separate approval.
 
-See `docs/DEPLOYMENT.md`, `docs/REA_SCOUT_PIPELINE.md`, and `docs/REA_RUNTIME_PHASE2.md`.
+See `docs/DEPLOYMENT.md`, `docs/REA_SCOUT_PIPELINE.md`, `docs/REA_RUNTIME_PHASE2.md`, and `docs/SKILLS_HUB_INTEGRATION.md`.

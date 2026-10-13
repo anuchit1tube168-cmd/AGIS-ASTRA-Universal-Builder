@@ -10,7 +10,9 @@
     "check": "tsc --noEmit",
     "rea:guard": "node scripts/rea-guard.mjs",
     "rea:init": "bash scripts/init-rea-source.sh",
-    "rea:new-case": "node scripts/new-rea-case.mjs"
+    "rea:new-case": "node scripts/new-rea-case.mjs",
+    "skills:guard": "node scripts/skills-hub-guard.mjs",
+    "skills:init": "bash scripts/init-skills-hub-source.sh"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "latest",
