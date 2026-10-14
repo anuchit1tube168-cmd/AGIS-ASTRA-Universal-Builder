@@ -67,10 +67,46 @@ CREATE TABLE IF NOT EXISTS rea_events (
 );
 CREATE INDEX IF NOT EXISTS idx_rea_events_case_created ON rea_events(case_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS skill_catalog (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  version TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  source_path TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'DRAFT',
+  test_status TEXT NOT NULL DEFAULT 'PENDING',
+  security_status TEXT NOT NULL DEFAULT 'PENDING',
+  distribution_targets TEXT NOT NULL DEFAULT '[]',
+  production_approved INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_skill_catalog_state ON skill_catalog(state, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS skill_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  skill_id TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  event TEXT NOT NULL,
+  from_state TEXT,
+  to_state TEXT,
+  detail TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(skill_id) REFERENCES skill_catalog(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_skill_events_skill_created ON skill_events(skill_id, created_at DESC);
+
 INSERT OR IGNORE INTO agents(id,name,status,capability) VALUES
 ('astra6','ASTRA 6','primary','orchestration,architecture,routing'),
 ('hermes','Hermes','approved','24x7 runtime,telegram,skills'),
 ('codex','Codex','approved','coding,implementation,review'),
 ('context7','Context7','approved','current versioned documentation'),
 ('playwright','Playwright','approved','browser verification'),
-('rea-scout','REA Scout','staging','authorized analysis,evidence,architecture,feature mapping,clean-room handoff');
+('rea-scout','REA Scout','staging','authorized analysis,evidence,architecture,feature mapping,clean-room handoff'),
+('skill-registry','ASTRA Skill Factory','staging','skill extraction,validation,promotion,registry governance');
+
+INSERT OR IGNORE INTO skill_catalog(
+  id,name,version,owner,source_path,state,test_status,security_status,distribution_targets,production_approved
+) VALUES
+('rea-evidence-scout','REA Evidence Scout','1.0.0','REA Scout','agents/rea-scout/SKILL.md','SECURITY_REVIEWED','PASS','PASS','["codex","hermes","opencode"]',0),
+('astra-skill-registry-management','ASTRA Skill Registry Management','1.0.0','ASTRA Skill Factory','agents/skill-registry/SKILL.md','VALIDATED','PASS','PENDING','["codex","hermes","opencode"]',0);
