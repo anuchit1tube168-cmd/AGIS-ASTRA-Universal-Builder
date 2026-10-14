@@ -44,12 +44,34 @@ const requiredStates = [
   'PRODUCTION_APPROVED'
 ];
 for (const state of requiredStates) if (!allowedStates.has(state)) fail(`missing registry state ${state}`);
+
+const ids = new Set();
 for (const item of registry.skills) {
   if (!item || typeof item !== 'object') fail('registry skill entry must be an object');
   if (!item.id || typeof item.id !== 'string') fail('registry skill entry requires id');
+  if (ids.has(item.id)) fail(`duplicate registry skill id ${item.id}`);
+  ids.add(item.id);
+  if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(item.id)) fail(`registry skill ${item.id} has invalid id format`);
+  if (!item.name || typeof item.name !== 'string') fail(`registry skill ${item.id} requires name`);
+  if (!item.version || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(item.version)) fail(`registry skill ${item.id} requires semver version`);
+  if (!item.owner || typeof item.owner !== 'string') fail(`registry skill ${item.id} requires owner`);
+  if (!item.source_path || typeof item.source_path !== 'string') fail(`registry skill ${item.id} requires source_path`);
+  const sourcePath = path.join(root, item.source_path);
+  if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) fail(`registry skill ${item.id} source_path does not exist`);
   if (!allowedStates.has(item.state)) fail(`registry skill ${item.id} has invalid state`);
-  if (item.state === 'PRODUCTION_APPROVED' && item.security_reviewed !== true) {
-    fail(`registry skill ${item.id} cannot be production approved without security review`);
+  if (!['PASS', 'PENDING', 'FAIL'].includes(item.test_status)) fail(`registry skill ${item.id} has invalid test_status`);
+  if (!['PASS', 'PENDING', 'FAIL'].includes(item.security_status)) fail(`registry skill ${item.id} has invalid security_status`);
+  if (!Array.isArray(item.distribution_targets) || item.distribution_targets.length === 0) fail(`registry skill ${item.id} requires distribution targets`);
+  if (item.distribution_targets.some((target) => typeof target !== 'string' || !target.trim())) fail(`registry skill ${item.id} has invalid distribution target`);
+  if (item.security_reviewed === true && item.security_status !== 'PASS') fail(`registry skill ${item.id} security flags disagree`);
+  if (['SECURITY_REVIEWED','REGISTRY_APPROVED','STAGING_SYNC','VERIFIED','PRODUCTION_APPROVED'].includes(item.state) && item.security_reviewed !== true) {
+    fail(`registry skill ${item.id} cannot be ${item.state} without security review`);
+  }
+  if (item.state === 'PRODUCTION_APPROVED' && item.production_approved !== true) {
+    fail(`registry skill ${item.id} production approval flags disagree`);
+  }
+  if (item.production_approved === true && item.state !== 'PRODUCTION_APPROVED') {
+    fail(`registry skill ${item.id} cannot set production_approved before terminal state`);
   }
 }
 

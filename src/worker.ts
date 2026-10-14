@@ -37,8 +37,32 @@ interface ReaCaseRow {
   updated_at: string;
 }
 
+interface SkillRow {
+  id: string;
+  name: string;
+  version: string;
+  owner: string;
+  source_path: string;
+  state: string;
+  test_status: string;
+  security_status: string;
+  distribution_targets: string;
+  production_approved: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const enc = new TextEncoder();
 const reaTargetTypes = new Set(["web", "electron", "android", "dotnet", "native", "other"]);
+const skillStates = [
+  "DRAFT",
+  "VALIDATED",
+  "SECURITY_REVIEWED",
+  "REGISTRY_APPROVED",
+  "STAGING_SYNC",
+  "VERIFIED",
+  "PRODUCTION_APPROVED"
+] as const;
 
 function json(data: unknown, status = 200, headers: HeadersInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -97,6 +121,20 @@ async function reaEvent(env: Env, caseId: string, event: string, detail = "") {
   ).bind(caseId, event, detail.slice(0,4000)).run();
 }
 
+async function skillEvent(
+  env: Env,
+  skillId: string,
+  actor: string,
+  event: string,
+  fromState: string | null,
+  toState: string | null,
+  detail = ""
+) {
+  await env.DB.prepare(
+    "INSERT INTO skill_events(skill_id,actor,event,from_state,to_state,detail) VALUES(?,?,?,?,?,?)"
+  ).bind(skillId, actor, event, fromState, toState, detail.slice(0,4000)).run();
+}
+
 async function protectedApi(req: Request, env: Env) {
   if (!(await validSession(req, env))) return json({error:"unauthorized"}, 401);
   return null;
@@ -104,6 +142,21 @@ async function protectedApi(req: Request, env: Env) {
 
 function reaRuntimeAvailable(env: Env) {
   return env.APP_ENV === "staging" && env.REA_RUNTIME_ENABLED === "true";
+}
+
+function nextSkillState(current: string) {
+  const index = skillStates.indexOf(current as typeof skillStates[number]);
+  if (index < 0 || index >= skillStates.length - 1) return null;
+  return skillStates[index + 1];
+}
+
+function parseTargets(value: string) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String).slice(0, 50) : [];
+  } catch {
+    return [];
+  }
 }
 
 function sanitizeTargetReference(value: string) {
@@ -145,6 +198,12 @@ async function getReaCase(env: Env, caseId: string) {
   return await env.DB.prepare(
     "SELECT id,task_id,name,target_reference,target_type,scope,authorization_confirmed,environment,production_write,status,result,error,created_at,updated_at FROM rea_cases WHERE id=?"
   ).bind(caseId).first() as ReaCaseRow | null;
+}
+
+async function getSkill(env: Env, skillId: string) {
+  return await env.DB.prepare(
+    "SELECT id,name,version,owner,source_path,state,test_status,security_status,distribution_targets,production_approved,created_at,updated_at FROM skill_catalog WHERE id=?"
+  ).bind(skillId).first() as SkillRow | null;
 }
 
 async function queueReaCase(env: Env, caseId: string, actor: string) {
@@ -223,12 +282,17 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
     const reaCases = await env.DB.prepare(
       "SELECT status, COUNT(*) AS count FROM rea_cases GROUP BY status"
     ).all();
+    const skills = await env.DB.prepare(
+      "SELECT state, COUNT(*) AS count FROM skill_catalog GROUP BY state"
+    ).all();
     return json({
       tasks:tasks.results,
       heartbeat:heartbeat.results,
       agents:agents.results,
       reaCases:reaCases.results,
-      reaRuntime:{enabled:reaRuntimeAvailable(env), appEnv:env.APP_ENV || "unknown"}
+      skills:skills.results,
+      reaRuntime:{enabled:reaRuntimeAvailable(env), appEnv:env.APP_ENV || "unknown"},
+      skillRegistry:{autoSync:false, productionWrite:false, canonical:"skills/registry.json"}
     });
   }
 
@@ -250,6 +314,98 @@ async function handleApi(req: Request, env: Env, url: URL): Promise<Response> {
     await env.TASK_QUEUE.send({taskId, command, source:"web", kind:"generic"});
     await audit(env, "web", "task_queued", taskId, command);
     return json({ok:true, taskId}, 202);
+  }
+
+  if (url.pathname === "/api/skills" && req.method === "GET") {
+    const rows = await env.DB.prepare(
+      "SELECT id,name,version,owner,source_path,state,test_status,security_status,distribution_targets,production_approved,created_at,updated_at FROM skill_catalog ORDER BY updated_at DESC,name"
+    ).all();
+    const skills = (rows.results as unknown as SkillRow[]).map((row) => ({
+      ...row,
+      distribution_targets:parseTargets(row.distribution_targets),
+      next_state:nextSkillState(row.state)
+    }));
+    return json({
+      skills,
+      states:skillStates,
+      policy:{
+        canonical:"skills/registry.json",
+        auto_sync_enabled:false,
+        production_write:false,
+        remote_publish:false
+      }
+    });
+  }
+
+  const skillEventsMatch = url.pathname.match(/^\/api\/skills\/([^/]+)\/events$/);
+  if (skillEventsMatch && req.method === "GET") {
+    let skillId = skillEventsMatch[1];
+    try { skillId = decodeURIComponent(skillId); } catch {}
+    const row = await getSkill(env, skillId);
+    if (!row) return json({error:"skill not found"}, 404);
+    const events = await env.DB.prepare(
+      "SELECT id,actor,event,from_state,to_state,detail,created_at FROM skill_events WHERE skill_id=? ORDER BY id DESC LIMIT 100"
+    ).bind(skillId).all();
+    return json({skill:{id:row.id,name:row.name,state:row.state}, events:events.results});
+  }
+
+  const skillPromoteMatch = url.pathname.match(/^\/api\/skills\/([^/]+)\/promote$/);
+  if (skillPromoteMatch && req.method === "POST") {
+    let skillId = skillPromoteMatch[1];
+    try { skillId = decodeURIComponent(skillId); } catch {}
+    const body = await req.json().catch(()=>({})) as {
+      security_review_passed?: boolean;
+      verification_confirmed?: boolean;
+      confirm_production?: boolean;
+      note?: string;
+    };
+    const row = await getSkill(env, skillId);
+    if (!row) return json({error:"skill not found"}, 404);
+    const next = nextSkillState(row.state);
+    if (!next) return json({error:"skill is already at terminal state"}, 409);
+
+    let securityStatus = row.security_status;
+    let productionApproved = row.production_approved;
+    if (next === "VALIDATED" && row.test_status !== "PASS") {
+      return json({error:"validation requires test_status=PASS"}, 409);
+    }
+    if (next === "SECURITY_REVIEWED") {
+      if (securityStatus !== "PASS" && body.security_review_passed !== true) {
+        return json({error:"security review confirmation required"}, 409);
+      }
+      securityStatus = "PASS";
+    }
+    if (next === "REGISTRY_APPROVED" && (row.test_status !== "PASS" || securityStatus !== "PASS")) {
+      return json({error:"registry approval requires tests and security review to pass"}, 409);
+    }
+    if (next === "VERIFIED" && body.verification_confirmed !== true) {
+      return json({error:"target verification confirmation required"}, 409);
+    }
+    if (next === "PRODUCTION_APPROVED") {
+      if (body.confirm_production !== true) return json({error:"explicit production approval confirmation required"}, 409);
+      productionApproved = 1;
+    }
+
+    await env.DB.prepare(
+      "UPDATE skill_catalog SET state=?,security_status=?,production_approved=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND state=?"
+    ).bind(next, securityStatus, productionApproved, skillId, row.state).run();
+    const note = (body.note || "").trim().slice(0,1000);
+    const detail = [
+      note,
+      next === "STAGING_SYNC" ? "approval metadata only; no sync executed" : "",
+      next === "PRODUCTION_APPROVED" ? "approval metadata only; production writes remain disabled" : ""
+    ].filter(Boolean).join("; ");
+    await skillEvent(env, skillId, "web", "promoted", row.state, next, detail);
+    await audit(env, "web", "skill_promoted", skillId, `${row.state}->${next}${detail ? `; ${detail}` : ""}`);
+    return json({
+      ok:true,
+      skillId,
+      from_state:row.state,
+      state:next,
+      next_state:nextSkillState(next),
+      auto_sync_executed:false,
+      production_write_executed:false
+    });
   }
 
   if (url.pathname === "/api/rea/cases" && req.method === "GET") {
@@ -375,6 +531,7 @@ async function fetchHandler(req: Request, env: Env): Promise<Response> {
       ok:true,
       env:env.APP_ENV || "unknown",
       reaRuntime:reaRuntimeAvailable(env),
+      skillRegistry:{autoSync:false, productionWrite:false},
       time:new Date().toISOString()
     });
   }
