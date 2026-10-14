@@ -13,5 +13,32 @@
     "VERIFIED",
     "PRODUCTION_APPROVED"
   ],
-  "skills": []
+  "skills": [
+    {
+      "id": "rea-evidence-scout",
+      "name": "REA Evidence Scout",
+      "version": "1.0.0",
+      "owner": "REA Scout",
+      "source_path": "agents/rea-scout/SKILL.md",
+      "state": "SECURITY_REVIEWED",
+      "test_status": "PASS",
+      "security_status": "PASS",
+      "security_reviewed": true,
+      "distribution_targets": ["codex", "hermes", "opencode"],
+      "production_approved": false
+    },
+    {
+      "id": "astra-skill-registry-management",
+      "name": "ASTRA Skill Registry Management",
+      "version": "1.0.0",
+      "owner": "ASTRA Skill Factory",
+      "source_path": "agents/skill-registry/SKILL.md",
+      "state": "VALIDATED",
+      "test_status": "PASS",
+      "security_status": "PENDING",
+      "security_reviewed": false,
+      "distribution_targets": ["codex", "hermes", "opencode"],
+      "production_approved": false
+    }
+  ]
 }
