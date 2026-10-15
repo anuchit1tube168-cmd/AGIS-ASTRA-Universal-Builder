@@ -1,5 +1,5 @@
 name = "agis-astra-control"
-main = "src/worker.ts"
+main = "src/worker-skills.ts"
 compatibility_date = "2026-09-01"
 
 [assets]
@@ -26,3 +26,4 @@ dead_letter_queue = "agis-astra-tasks-dlq"
 APP_ENV = "production"
 SESSION_TTL_SECONDS = "43200"
 REA_RUNTIME_ENABLED = "false"
+SKILL_CANDIDATE_INGEST_ENABLED = "false"
