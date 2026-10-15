@@ -16,7 +16,9 @@ const registry = readJson('skills/registry.json');
 const gitmodules = fs.readFileSync(path.join(root, '.gitmodules'), 'utf8');
 const wrangler = fs.readFileSync(path.join(root, 'wrangler.toml'), 'utf8');
 const workerSkillsPath = path.join(root, 'src/worker-skills.ts');
+const workerAutoPath = path.join(root, 'src/worker-auto-extractor.ts');
 const submitHelperPath = path.join(root, 'scripts/submit-skill-candidate.mjs');
+const bridgeExamplePath = path.join(root, 'bridge/bridge.env.example');
 
 if (lock.source !== 'https://github.com/qufei1993/skills-hub') fail('unexpected upstream source');
 if (!/^[0-9a-f]{40}$/.test(lock.commit)) fail('upstream commit must be a full SHA');
@@ -33,11 +35,17 @@ if (policy.sync_requires_review !== true) fail('sync review must remain required
 if (policy.upstream_upgrade_review !== 'required') fail('upstream review must remain required');
 
 if (!fs.existsSync(workerSkillsPath)) fail('src/worker-skills.ts is missing');
+if (!fs.existsSync(workerAutoPath)) fail('src/worker-auto-extractor.ts is missing');
 if (!fs.existsSync(submitHelperPath)) fail('candidate submit helper is missing');
-if (!/^main\s*=\s*"src\/worker-skills\.ts"/m.test(wrangler)) fail('wrangler main must use the guarded Skills runtime wrapper');
+if (!fs.existsSync(bridgeExamplePath)) fail('bridge env example is missing');
+if (!/^main\s*=\s*"src\/worker-auto-extractor\.ts"/m.test(wrangler)) fail('wrangler main must use the guarded auto extractor wrapper');
 if (!/^APP_ENV\s*=\s*"production"/m.test(wrangler)) fail('committed APP_ENV must remain production');
 if (!/^SKILL_CANDIDATE_INGEST_ENABLED\s*=\s*"false"/m.test(wrangler)) fail('candidate ingest must remain disabled in committed config');
+if (!/^SKILL_EXTRACTOR_ENABLED\s*=\s*"false"/m.test(wrangler)) fail('skill extractor must remain disabled in committed Worker config');
 if (!/^REA_RUNTIME_ENABLED\s*=\s*"false"/m.test(wrangler)) fail('REA runtime must remain disabled in committed config');
+
+const bridgeExample = fs.readFileSync(bridgeExamplePath, 'utf8');
+if (!/^SKILL_EXTRACTOR_EXECUTION_ENABLED=false$/m.test(bridgeExample)) fail('skill extractor must remain disabled in committed Bridge config');
 
 if (registry.schema_version !== 1) fail('unexpected registry schema version');
 if (registry.auto_sync_enabled !== false) fail('registry auto sync must remain disabled');
@@ -96,11 +104,16 @@ if (!match) fail('vendor/skills-hub is not a git submodule entry');
 if (match[1] !== lock.commit) fail(`gitlink ${match[1]} does not match lock ${lock.commit}`);
 
 const workerSkills = fs.readFileSync(workerSkillsPath, 'utf8');
-if (!workerSkills.includes('executed:false') && !workerSkills.includes('executed:false'.replace(':', ':'))) {
-  fail('Skills runtime must expose dry-run execution=false semantics');
-}
+if (!workerSkills.includes('executed:false')) fail('Skills runtime must expose dry-run execution=false semantics');
 if (!workerSkills.includes('canonical_write:false')) fail('candidate flow must explicitly keep canonical writes disabled');
 if (!workerSkills.includes('auto_sync:false')) fail('candidate/sync flow must explicitly keep auto sync disabled');
+
+const workerAuto = fs.readFileSync(workerAutoPath, 'utf8');
+for (const marker of ['SKILL_EXTRACTOR_SOURCE','PENDING_REVIEW','human_review_required:true','canonical_write:false','auto_sync:false']) {
+  if (!workerAuto.includes(marker)) fail(`auto extractor wrapper is missing safety marker ${marker}`);
+}
+if (!workerAuto.includes('containsSecretMaterial')) fail('auto extractor must pre-scan credential material');
+if (!workerAuto.includes('skill-extractor:')) fail('auto extractor task source envelope is missing');
 
 const tracked = git(['ls-files', 'skills']).split('\n').filter(Boolean);
 const secretPatterns = [
@@ -118,4 +131,4 @@ for (const file of tracked) {
   if (secretPatterns.some((pattern) => pattern.test(content))) fail(`possible credential material in ${file}`);
 }
 
-console.log(`Skills Hub guard passed. Pinned at ${lock.commit}. ${registry.skills.length} registered skill(s). Candidate ingest is default-off; sync planning is dry-run; auto-sync and production writes remain disabled.`);
+console.log(`Skills Hub guard passed. Pinned at ${lock.commit}. ${registry.skills.length} registered skill(s). Auto extraction is review-gated and default-off; sync planning is dry-run; auto-sync and production writes remain disabled.`);
