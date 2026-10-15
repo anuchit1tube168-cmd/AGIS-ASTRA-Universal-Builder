@@ -1,11 +1,12 @@
 {
   "name": "agis-astra-24x7",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:preflight": "node scripts/deploy-preflight.mjs",
     "db:migrate": "wrangler d1 execute agis-astra-db --remote --file=./db/schema.sql",
     "check": "tsc --noEmit",
     "rea:guard": "node scripts/rea-guard.mjs",
