@@ -44,7 +44,7 @@ function reaConfigReady() { return isolatedConfigReady(REA_EXECUTION_ENABLED, RE
 function skillConfigReady() { return isolatedConfigReady(SKILL_EXTRACTOR_EXECUTION_ENABLED, SKILL_HERMES_HOME, SKILL_WORKSPACE_ROOT); }
 
 function isolatedChildEnv(home, tempDir, userName) {
-  const env = {
+  return {
     PATH: process.env.PATH || "/usr/bin:/bin",
     HOME: home,
     TMPDIR: tempDir,
@@ -55,7 +55,6 @@ function isolatedChildEnv(home, tempDir, userName) {
     XDG_CONFIG_HOME: path.join(home, ".config"),
     XDG_CACHE_HOME: path.join(home, ".cache"),
   };
-  return env;
 }
 
 function reaChildEnv(tempDir) {
@@ -65,10 +64,7 @@ function reaChildEnv(tempDir) {
   }
   return env;
 }
-
-function skillChildEnv(tempDir) {
-  return isolatedChildEnv(SKILL_HERMES_HOME, tempDir, process.env.SKILL_RUNTIME_USER || "agis-skill");
-}
+function skillChildEnv(tempDir) { return isolatedChildEnv(SKILL_HERMES_HOME, tempDir, process.env.SKILL_RUNTIME_USER || "agis-skill"); }
 
 async function assertPaths(home, workspace, label) {
   if (!home || !workspace) throw new Error(`${label} isolation is not configured`);
@@ -144,7 +140,8 @@ const server=http.createServer(async(req,res)=>{
     const body=await readJson(req);
     const taskId=String(body.taskId||"");
     const command=String(body.command||"").trim();
-    const kind=body.kind === "rea-scout" ? "rea-scout" : body.kind === "skill-extractor" ? "skill-extractor" : body.kind === "generic" || !body.kind ? "generic" : "invalid";
+    const source=String(body.source||"");
+    const kind=body.kind === "rea-scout" ? "rea-scout" : body.kind === "skill-extractor" || source.startsWith("skill-extractor:") ? "skill-extractor" : body.kind === "generic" || !body.kind ? "generic" : "invalid";
     const caseId=String(body.caseId||"");
     if(!taskId||!command||command.length>20000||kind==="invalid") return send(res,400,{error:"invalid task"});
     if(kind==="rea-scout") {
