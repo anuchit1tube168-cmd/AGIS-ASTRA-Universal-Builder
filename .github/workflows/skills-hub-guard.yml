@@ -6,14 +6,19 @@ on:
       - '.gitmodules'
       - 'vendor/skills-hub'
       - 'agents/skill-registry/**'
+      - 'agents/skill-extractor/**'
       - 'skills/**'
       - 'scripts/skills-hub-guard.mjs'
       - 'scripts/init-skills-hub-source.sh'
+      - 'scripts/submit-skill-candidate.mjs'
       - 'docs/SKILLS_HUB_*'
       - 'docs/ASTRA_SKILL_FACTORY.md'
       - 'src/worker.ts'
+      - 'src/worker-skills.ts'
       - 'db/schema.sql'
       - 'public/index.html'
+      - 'public/skills.html'
+      - 'wrangler.toml'
       - '.github/workflows/skills-hub-guard.yml'
       - 'package.json'
   push:
@@ -25,14 +30,19 @@ on:
       - '.gitmodules'
       - 'vendor/skills-hub'
       - 'agents/skill-registry/**'
+      - 'agents/skill-extractor/**'
       - 'skills/**'
       - 'scripts/skills-hub-guard.mjs'
       - 'scripts/init-skills-hub-source.sh'
+      - 'scripts/submit-skill-candidate.mjs'
       - 'docs/SKILLS_HUB_*'
       - 'docs/ASTRA_SKILL_FACTORY.md'
       - 'src/worker.ts'
+      - 'src/worker-skills.ts'
       - 'db/schema.sql'
       - 'public/index.html'
+      - 'public/skills.html'
+      - 'wrangler.toml'
       - '.github/workflows/skills-hub-guard.yml'
       - 'package.json'
 
@@ -60,6 +70,9 @@ jobs:
 
       - name: Syntax-check registry guard
         run: node --check scripts/skills-hub-guard.mjs
+
+      - name: Syntax-check candidate submit helper
+        run: node --check scripts/submit-skill-candidate.mjs
 
       - name: Syntax-check safe initializer
         run: bash -n scripts/init-skills-hub-source.sh
