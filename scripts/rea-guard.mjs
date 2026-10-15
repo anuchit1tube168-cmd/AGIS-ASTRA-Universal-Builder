@@ -47,8 +47,17 @@ if (!gitmodules.includes('url = https://github.com/morluto/rea.git')) {
 if (!wrangler.includes('APP_ENV = "production"')) fail('committed worker config must remain production');
 if (!wrangler.includes('REA_RUNTIME_ENABLED = "false"')) fail('REA worker runtime must be disabled in committed production config');
 if (!/^REA_EXECUTION_ENABLED=false$/m.test(bridgeExample)) fail('REA bridge execution must be disabled in committed example');
+if (!bridgeSource.includes('function isolatedConfigReady(')) fail('bridge must define shared isolated runtime validation');
+if (!bridgeSource.includes('workspace !== AGIS_REPO') || !bridgeSource.includes('home !== AGIS_REPO')) {
+  fail('isolated runtime paths must be guarded from the AGIS repo root');
+}
+if (!bridgeSource.includes('function reaConfigReady()') || !bridgeSource.includes('isolatedConfigReady(REA_EXECUTION_ENABLED, REA_HERMES_HOME, REA_WORKSPACE_ROOT)')) {
+  fail('REA readiness must use shared isolated runtime validation');
+}
 if (!bridgeSource.includes('function reaChildEnv(')) fail('bridge must define isolated REA child environment');
-if (!bridgeSource.includes('REA_WORKSPACE_ROOT !== AGIS_REPO')) fail('REA workspace must be guarded from the AGIS repo root');
+if (!bridgeSource.includes('await assertPaths(REA_HERMES_HOME, REA_WORKSPACE_ROOT, "REA runtime")')) {
+  fail('REA runtime must verify isolated HOME/workspace paths before execution');
+}
 if (!bridgeSource.includes('childEnv = reaChildEnv(dir)')) fail('REA tasks must use the isolated child environment');
 
 let treeLine = '';
@@ -103,4 +112,4 @@ for (const file of trackedCases) {
 }
 
 console.log(`REA guard passed. Upstream pinned at ${lock.commit}. Production writes remain disabled.`);
-console.log(`Validated runtime default-off posture plus ${caseFiles.length} REA case manifest(s) and ${trackedCases.length} tracked case file(s).`);
+console.log(`Validated shared bridge isolation plus ${caseFiles.length} REA case manifest(s) and ${trackedCases.length} tracked case file(s).`);

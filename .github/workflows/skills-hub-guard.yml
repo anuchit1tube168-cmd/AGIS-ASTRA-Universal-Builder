@@ -11,10 +11,16 @@ on:
       - 'scripts/skills-hub-guard.mjs'
       - 'scripts/init-skills-hub-source.sh'
       - 'scripts/submit-skill-candidate.mjs'
+      - 'scripts/deploy-preflight.mjs'
       - 'docs/SKILLS_HUB_*'
+      - 'docs/SKILL_AUTO_EXTRACTOR.md'
       - 'docs/ASTRA_SKILL_FACTORY.md'
       - 'src/worker.ts'
       - 'src/worker-skills.ts'
+      - 'src/worker-auto-extractor.ts'
+      - 'bridge/server.mjs'
+      - 'bridge/bridge.env.example'
+      - 'bridge/agis-bridge.service'
       - 'db/schema.sql'
       - 'public/index.html'
       - 'public/skills.html'
@@ -26,6 +32,7 @@ on:
       - main
       - 'integration/skills-hub-*'
       - 'integration/astra-skill-factory-*'
+      - 'integration/skill-auto-extractor-*'
     paths:
       - '.gitmodules'
       - 'vendor/skills-hub'
@@ -35,10 +42,16 @@ on:
       - 'scripts/skills-hub-guard.mjs'
       - 'scripts/init-skills-hub-source.sh'
       - 'scripts/submit-skill-candidate.mjs'
+      - 'scripts/deploy-preflight.mjs'
       - 'docs/SKILLS_HUB_*'
+      - 'docs/SKILL_AUTO_EXTRACTOR.md'
       - 'docs/ASTRA_SKILL_FACTORY.md'
       - 'src/worker.ts'
       - 'src/worker-skills.ts'
+      - 'src/worker-auto-extractor.ts'
+      - 'bridge/server.mjs'
+      - 'bridge/bridge.env.example'
+      - 'bridge/agis-bridge.service'
       - 'db/schema.sql'
       - 'public/index.html'
       - 'public/skills.html'
@@ -73,6 +86,15 @@ jobs:
 
       - name: Syntax-check candidate submit helper
         run: node --check scripts/submit-skill-candidate.mjs
+
+      - name: Syntax-check deploy preflight
+        run: node --check scripts/deploy-preflight.mjs
+
+      - name: Syntax-check isolated bridge
+        run: node --check bridge/server.mjs
+
+      - name: Validate safe committed deployment defaults
+        run: node scripts/deploy-preflight.mjs --ci
 
       - name: Syntax-check safe initializer
         run: bash -n scripts/init-skills-hub-source.sh
