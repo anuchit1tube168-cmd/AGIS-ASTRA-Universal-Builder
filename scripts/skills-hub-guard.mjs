@@ -14,6 +14,9 @@ const lock = readJson('agents/skill-registry/SKILLS_HUB_UPSTREAM.lock.json');
 const policy = readJson('agents/skill-registry/policy.json');
 const registry = readJson('skills/registry.json');
 const gitmodules = fs.readFileSync(path.join(root, '.gitmodules'), 'utf8');
+const wrangler = fs.readFileSync(path.join(root, 'wrangler.toml'), 'utf8');
+const workerSkillsPath = path.join(root, 'src/worker-skills.ts');
+const submitHelperPath = path.join(root, 'scripts/submit-skill-candidate.mjs');
 
 if (lock.source !== 'https://github.com/qufei1993/skills-hub') fail('unexpected upstream source');
 if (!/^[0-9a-f]{40}$/.test(lock.commit)) fail('upstream commit must be a full SHA');
@@ -28,6 +31,13 @@ if (policy.credential_access !== false) fail('credential access must remain disa
 if (policy.remote_publish !== false) fail('remote publish must remain disabled');
 if (policy.sync_requires_review !== true) fail('sync review must remain required');
 if (policy.upstream_upgrade_review !== 'required') fail('upstream review must remain required');
+
+if (!fs.existsSync(workerSkillsPath)) fail('src/worker-skills.ts is missing');
+if (!fs.existsSync(submitHelperPath)) fail('candidate submit helper is missing');
+if (!/^main\s*=\s*"src\/worker-skills\.ts"/m.test(wrangler)) fail('wrangler main must use the guarded Skills runtime wrapper');
+if (!/^APP_ENV\s*=\s*"production"/m.test(wrangler)) fail('committed APP_ENV must remain production');
+if (!/^SKILL_CANDIDATE_INGEST_ENABLED\s*=\s*"false"/m.test(wrangler)) fail('candidate ingest must remain disabled in committed config');
+if (!/^REA_RUNTIME_ENABLED\s*=\s*"false"/m.test(wrangler)) fail('REA runtime must remain disabled in committed config');
 
 if (registry.schema_version !== 1) fail('unexpected registry schema version');
 if (registry.auto_sync_enabled !== false) fail('registry auto sync must remain disabled');
@@ -45,6 +55,7 @@ const requiredStates = [
 ];
 for (const state of requiredStates) if (!allowedStates.has(state)) fail(`missing registry state ${state}`);
 
+const allowedTargets = new Set(['codex','hermes','opencode','antigravity','custom']);
 const ids = new Set();
 for (const item of registry.skills) {
   if (!item || typeof item !== 'object') fail('registry skill entry must be an object');
@@ -62,7 +73,7 @@ for (const item of registry.skills) {
   if (!['PASS', 'PENDING', 'FAIL'].includes(item.test_status)) fail(`registry skill ${item.id} has invalid test_status`);
   if (!['PASS', 'PENDING', 'FAIL'].includes(item.security_status)) fail(`registry skill ${item.id} has invalid security_status`);
   if (!Array.isArray(item.distribution_targets) || item.distribution_targets.length === 0) fail(`registry skill ${item.id} requires distribution targets`);
-  if (item.distribution_targets.some((target) => typeof target !== 'string' || !target.trim())) fail(`registry skill ${item.id} has invalid distribution target`);
+  if (item.distribution_targets.some((target) => typeof target !== 'string' || !allowedTargets.has(target))) fail(`registry skill ${item.id} has invalid distribution target`);
   if (item.security_reviewed === true && item.security_status !== 'PASS') fail(`registry skill ${item.id} security flags disagree`);
   if (['SECURITY_REVIEWED','REGISTRY_APPROVED','STAGING_SYNC','VERIFIED','PRODUCTION_APPROVED'].includes(item.state) && item.security_reviewed !== true) {
     fail(`registry skill ${item.id} cannot be ${item.state} without security review`);
@@ -84,6 +95,13 @@ const match = treeLine.match(/^160000 commit ([0-9a-f]{40})\tvendor\/skills-hub$
 if (!match) fail('vendor/skills-hub is not a git submodule entry');
 if (match[1] !== lock.commit) fail(`gitlink ${match[1]} does not match lock ${lock.commit}`);
 
+const workerSkills = fs.readFileSync(workerSkillsPath, 'utf8');
+if (!workerSkills.includes('executed:false') && !workerSkills.includes('executed:false'.replace(':', ':'))) {
+  fail('Skills runtime must expose dry-run execution=false semantics');
+}
+if (!workerSkills.includes('canonical_write:false')) fail('candidate flow must explicitly keep canonical writes disabled');
+if (!workerSkills.includes('auto_sync:false')) fail('candidate/sync flow must explicitly keep auto sync disabled');
+
 const tracked = git(['ls-files', 'skills']).split('\n').filter(Boolean);
 const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/,
@@ -100,4 +118,4 @@ for (const file of tracked) {
   if (secretPatterns.some((pattern) => pattern.test(content))) fail(`possible credential material in ${file}`);
 }
 
-console.log(`Skills Hub guard passed. Pinned at ${lock.commit}. ${registry.skills.length} registered skill(s). Auto-sync and production writes remain disabled.`);
+console.log(`Skills Hub guard passed. Pinned at ${lock.commit}. ${registry.skills.length} registered skill(s). Candidate ingest is default-off; sync planning is dry-run; auto-sync and production writes remain disabled.`);

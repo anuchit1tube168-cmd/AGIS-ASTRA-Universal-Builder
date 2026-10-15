@@ -39,6 +39,19 @@
       "security_reviewed": false,
       "distribution_targets": ["codex", "hermes", "opencode"],
       "production_approved": false
+    },
+    {
+      "id": "astra-skill-extractor",
+      "name": "ASTRA Skill Extractor",
+      "version": "0.1.0",
+      "owner": "ASTRA Skill Factory",
+      "source_path": "agents/skill-extractor/SKILL.md",
+      "state": "DRAFT",
+      "test_status": "PENDING",
+      "security_status": "PENDING",
+      "security_reviewed": false,
+      "distribution_targets": ["codex", "hermes", "opencode", "antigravity"],
+      "production_approved": false
     }
   ]
 }

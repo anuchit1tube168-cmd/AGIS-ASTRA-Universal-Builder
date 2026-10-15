@@ -1,6 +1,6 @@
 {
   "name": "agis-astra-24x7",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,8 @@
     "rea:init": "bash scripts/init-rea-source.sh",
     "rea:new-case": "node scripts/new-rea-case.mjs",
     "skills:guard": "node scripts/skills-hub-guard.mjs",
-    "skills:init": "bash scripts/init-skills-hub-source.sh"
+    "skills:init": "bash scripts/init-skills-hub-source.sh",
+    "skills:submit-candidate": "node scripts/submit-skill-candidate.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "latest",
