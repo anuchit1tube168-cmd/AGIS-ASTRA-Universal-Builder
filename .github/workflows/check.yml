@@ -2,6 +2,10 @@ name: check
 on:
   push:
   pull_request:
+# จำกัด GITHUB_TOKEN ให้อ่านอย่างเดียว เพื่อลดความเสียหายถ้ามีโค้ดแปลกปลอมรันใน workflow
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
